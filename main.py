@@ -2,8 +2,11 @@ import network
 import urequests  # for fetch requests
 from measure import measure
 import time
+import config
+import ubinascii
+import machine
 
-sleep_time = False
+sleep_time = True
 
 # Access point for device configuration
 ap = network.WLAN(network.AP_IF)
@@ -13,34 +16,76 @@ ap.config(max_clients=1)
 ap.active(True)
 
 
-def connect_to_wifi(ssid, password):
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
+def generate_mac_address():
+    unique_id = machine.unique_id()
 
-    if not wlan.isconnected():
-        print("Connecting to Wi-Fi...")
-        wlan.connect(ssid, password)
+    custom_prefix = b"ESP-32"
+    mac_address = custom_prefix + unique_id[-3:]
 
-        while not wlan.isconnected():
-            pass
+    formatted_mac_address = ":".join(
+        "{:02x}".format(byte) for byte in mac_address)
 
-    print("Connected to Wi-Fi")
-    print("IP Address:", wlan.ifconfig()[0])
+    return formatted_mac_address
 
 
-# Wifi Data
-wifi_ssid = "Slava UKRAINE"
-wifi_password = "simpledimple"
+try:
+    if not config.DEVICE_ID:
+        mac_address = generate_mac_address()
+        config.DEVICE_ID = mac_address
+        with open("config.py", "a") as config_file:
+            config_file.write(f"DEVICE_ID = \"{mac_address}\"")
+        print("Generated and stored MAC Address:", mac_address)
+    else:
+        mac_address = config.DEVICE_ID
+        print("Stored MAC Address:", mac_address)
 
-connect_to_wifi(wifi_ssid, wifi_password)
+except AttributeError:
+    mac_address = generate_mac_address()
+    config.DEVICE_ID = mac_address
+    with open("config.py", "a") as config_file:
+        config_file.write(f"DEVICE_ID = \"{mac_address}\"")
+    print("Generated and stored MAC Address:", mac_address)
 
-while True:
-    if sleep_time:
+
+def connect_to_wifi():
+    if config.WIFI_SSID and config.WIFI_PASS:
+        sta = network.WLAN(network.STA_IF)
+        sta.active(True)
+        sta.connect(config.WIFI_SSID, config.WIFI_PASS)
+        while not sta.isconnected():
+            time.sleep(1)
+            print("Connecting to WiFi...")
+        print("Connected to WiFi")
+        return True
+    else:
+        print("No wifi credentials provided")
+        return False
+
+
+def request_data(temp, hum):
+    data = {"temperature": temp, "humidity": hum}
+
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "ESP32 MicroPython"
+    }
+
+    dest = config.API_URL + "sensor-data/"
+
+    try:
+        response = urequests.post(url=dest, headers=headers, json=data)
+        if response.status_code == 200:
+            print("Data sent successfully")
+        else:
+            print("Error sending data")
+
+    except OSError as e:
+        print("Error sending data")
+        print(e)
+
+
+if connect_to_wifi():
+    while True:
         temp, hum = measure()
-        time.sleep(5)
-        print("Temperature:", temp, " Humidity:", hum)
-
-    if not sleep_time:
-        temp, hum = measure()
-        time.sleep(30)
-        print("Temperature:", temp, " Humidity:", hum)
+        request_data(temp, hum)
+        time.sleep(5 if sleep_time else 30)

@@ -1,10 +1,9 @@
 import dht
 import machine
-
-DHT_PIN = 14
+import config
 
 
 def measure():
-    d = dht.DHT22(machine.Pin(DHT_PIN))
+    d = dht.DHT22(machine.Pin(config.DHT_22_PIN))
     d.measure()
     return d.temperature(), d.humidity()
