@@ -3,10 +3,21 @@ import socket
 import time
 import urequests
 import machine
+import ujson
 
-import config
+import measure
 
+# Function to load config from JSON file
+def load_config():
+    with open('configuration.json', 'r') as f:
+        return ujson.load(f)
 
+# Function to save config to JSON file
+def save_config(config):
+    with open('configuration.json', 'w') as f:
+        ujson.dump(config, f)
+
+# Function to configure Wi-Fi
 def configure_wifi(ssid, password):
     sta = network.WLAN(network.STA_IF)
     sta.active(True)
@@ -22,16 +33,25 @@ def configure_wifi(ssid, password):
     print('Network config:', sta.ifconfig())
     return True
 
+# Function to get MAC address
+def get_mac_address():
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    mac = wlan.config('mac')
+    mac_address = ':'.join(['{:02x}'.format(b) for b in mac])
+    return mac_address
+
 # Function to send measurement data
-def send_measurement_data(api_url, data):
+def send_measurement_data(api_url, data, headers):
     try:
-        response = urequests.post(api_url, json=data)
+        response = urequests.post(api_url, json=data, headers=headers)
         print('Response from server:', response.text)
         response.close()
     except Exception as e:
         print('Error sending data:', e)
+        
 
-
+# Function to start Access Point
 def start_ap():
     ap = network.WLAN(network.AP_IF)
     ap.active(True)
@@ -39,7 +59,7 @@ def start_ap():
     print('AP IP address:', ap.ifconfig()[0])
     return ap
 
-
+# Function to listen for incoming connections and configure Wi-Fi
 def listen_for_config(ap):
     port = 8080
     addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
@@ -57,10 +77,19 @@ def listen_for_config(ap):
         
         try:
             ssid = data.split('SSID=')[1].split(';')[0]
-            password = data.split('PASSWORD=')[1]
+            password = data.split('PASSWORD=')[1].split(';')[0]
+            user_id = data.split('USER_ID=')[1]
             print('SSID:', ssid)
             print('Password:', password)
-            save_config(ssid, password)
+            print('User id:', user_id)
+            
+            config = load_config()
+            config['WIFI_SSID'] = ssid
+            config['WIFI_PASS'] = password
+            config['USER_ID'] = user_id
+            config['MAC_ADDRESS'] = get_mac_address()
+            save_config(config)
+            
             cl.send('Wi-Fi configured successfully. Restarting...'.encode('utf-8'))
             machine.reset() 
         except Exception as e:
@@ -71,29 +100,24 @@ def listen_for_config(ap):
     ap.active(False)
     s.close()
 
-
-def save_config(ssid, password):
-    with open('config.py.template', 'r') as template_file:
-        template = template_file.read()
-    
-    config_content = template.format(WIFI_SSID=ssid, WIFI_PASS=password)
-    
-    with open('config.py', 'w') as config_file:
-        config_file.write(config_content)
-
+config = load_config()
 
 sta = network.WLAN(network.STA_IF)
 sta.active(True)
 
-if not configure_wifi(config.WIFI_SSID, config.WIFI_PASS):
+if not configure_wifi(config['WIFI_SSID'], config['WIFI_PASS']):
     ap = start_ap()
     listen_for_config(ap)
 
-
 while True:
-    measurement_data = {
-        'temperature': 25.5,  
-        'humidity': 60  
+    print(measure.measure())
+    headers = {
+        "Authorization": "Token 7509fb071cc48ad4c0199323e9ac3e731916ffaa"
     }
-    send_measurement_data(config.API_URL, measurement_data)
+    request = {
+        "device": 2,
+        "value": 56,
+        "type": 1
+    }
+    send_measurement_data(config['API_URL'] + "/measurements/", request, headers)
     time.sleep(5)
