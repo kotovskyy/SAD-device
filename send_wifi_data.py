@@ -32,5 +32,6 @@ def send_wifi_config(ssid, password):
 if __name__ == "__main__":
     ssid = "Slava UKRAINE"  
     password = "simpledimple"
+    user_id = "1"
 
     send_wifi_config(ssid, password)
