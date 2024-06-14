@@ -1,15 +1,8 @@
 import socket
 
 def send_wifi_config(ssid, password):
-    """
-    Connects to the ESP32 AP and sends Wi-Fi configuration data.
-
-    Args:
-    ssid (str): The SSID of the target Wi-Fi network.
-    password (str): The password of the target Wi-Fi network.
-    """
-    esp32_ip = '192.168.4.1'  # Default IP address of the ESP32 when acting as an AP
-    esp32_port = 8080  # Port on which the ESP32 is listening
+    esp32_ip = '192.168.4.1' 
+    esp32_port = 8080 
     data = f'SSID={ssid};PASSWORD={password}'
     
     try:
@@ -35,9 +28,9 @@ def send_wifi_config(ssid, password):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-# Example usage
+
 if __name__ == "__main__":
-    ssid = "YourSSID"  # Replace with the SSID of your Wi-Fi network
-    password = "YourPassword"  # Replace with the password of your Wi-Fi network
+    ssid = "Slava UKRAINE"  
+    password = "simpledimple"
 
     send_wifi_config(ssid, password)
