@@ -4,7 +4,7 @@ import time
 import urequests
 import machine
 import ujson
-
+import uasyncio as asyncio
 import measure
 
 # Function to load config from JSON file
@@ -42,14 +42,13 @@ def get_mac_address():
     return mac_address
 
 # Function to send measurement data
-def send_measurement_data(api_url, data, headers):
+async def send_measurement_data(api_url, data, headers):
     try:
         response = urequests.post(api_url, json=data, headers=headers)
         print('Response from server:', response.text)
         response.close()
     except Exception as e:
         print('Error sending data:', e)
-        
 
 # Function to start Access Point
 def start_ap():
@@ -58,6 +57,21 @@ def start_ap():
     ap.config(essid='ESP32_AP', password='password')
     print('AP IP address:', ap.ifconfig()[0])
     return ap
+
+# Function to fetch settings
+async def fetch_settings(api_url, headers):
+    data = {
+        "device": load_config()['DEVICE_ID']
+    }
+    query_params = urllib.parse.urlencode(data)
+    full_url = f"{api_url}?{query_params}"
+    
+    try:
+        response = urequests.get(full_url, headers=headers)
+        print('Response from server:', response.text)
+        response.close()
+    except Exception as e:
+        print("Error sending request: ", e)
 
 # Function to listen for incoming connections and configure Wi-Fi
 def listen_for_config(ap):
@@ -85,7 +99,6 @@ def listen_for_config(ap):
             print('Device id:', device_id)
             print('Token:', token)
             
-            
             mac_address = get_mac_address()
             config = load_config()
             config['WIFI_SSID'] = ssid
@@ -106,33 +119,45 @@ def listen_for_config(ap):
     ap.active(False)
     s.close()
 
-config = load_config()
+async def send_measurements_loop(api_url, headers):
+    while True:
+        temperature, humidity = measure.measure()
+        request_temperature = {
+            "device": load_config()['DEVICE_ID'],
+            "value": temperature,
+            "type": 1
+        }
+        request_humidity = {
+            "device": load_config()['DEVICE_ID'],
+            "value": humidity,
+            "type": 1
+        }
+        
+        await send_measurement_data(api_url + "/measurements/", request_temperature, headers)
+        await send_measurement_data(api_url + "/measurements/", request_humidity, headers)
+        
+        await asyncio.sleep(5)  # Wait for 5 seconds before sending the next measurements
 
-sta = network.WLAN(network.STA_IF)
-sta.active(True)
+async def fetch_settings_loop(api_url, headers):
+    while True:
+        await fetch_settings(api_url + "/settings/", headers)
+        await asyncio.sleep(10) 
 
-if not configure_wifi(config['WIFI_SSID'], config['WIFI_PASS']):
-    ap = start_ap()
-    listen_for_config(ap)
-    
-    
-headers = {
-        "Authorization": "Token " + load_config()['TOKEN']
-}
-
-while True:
-    temperature, humidity = measure.measure()
-    request_temperature = {
-        "device": load_config()['DEVICE_ID'],
-        "value": temperature,
-        "type": 1
+async def main():
+    config = load_config()
+    headers = {
+        "Authorization": "Token " + config['TOKEN']
     }
-    request_humidity = {
-        "device": load_config()['DEVICE_ID'],
-        "value": humidity,
-        "type": 1
-    }
-    send_measurement_data(config['API_URL'] + "/measurements/", request_temperature, headers)
-    send_measurement_data(config['API_URL'] + "/measurements/", request_humidity, headers)
-                                            
-    time.sleep(5)
+    
+    if not configure_wifi(config['WIFI_SSID'], config['WIFI_PASS']):
+        ap = start_ap()
+        listen_for_config(ap)
+    
+    # Run both loops concurrently
+    await asyncio.gather(
+        send_measurements_loop(config['API_URL'], headers),
+        fetch_settings_loop(config['API_URL'], headers)
+    )
+
+# Run the main function
+asyncio.run(main())

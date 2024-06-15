@@ -5,7 +5,7 @@
     "DHT_22_PIN": 14,
     "LIGHT_SENSOR_PIN": 34,
     "TYPE": 1,
-    "TOKEN": "",
-    "MAC_ADDRESS": "",
-    "DEVICE_ID": ""
+    "TOKEN": "d8546310f4afa07467b00cf4076ac38b8340f096",
+    "MAC_ADDRESS": "AA:BB:CC:DD:HJ",
+    "DEVICE_ID": "3"
 }
