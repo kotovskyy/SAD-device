@@ -54,7 +54,7 @@ async def send_measurement_data(api_url, data, headers):
 def start_ap():
     ap = network.WLAN(network.AP_IF)
     ap.active(True)
-    ap.config(essid='ESP32_AP', password='password')
+    ap.config(essid='ESP32', password='password')
     print('AP IP address:', ap.ifconfig()[0])
     return ap
 
@@ -63,7 +63,7 @@ async def fetch_settings(api_url, headers):
     data = {
         "device": load_config()['DEVICE_ID']
     }
-    query_params = urllib.parse.urlencode(data)
+    query_params = '&'.join([f"{k}={v}" for k, v in data.items()])
     full_url = f"{api_url}?{query_params}"
     
     try:
@@ -92,18 +92,18 @@ def listen_for_config(ap):
         try:
             ssid = data.split('SSID=')[1].split(';')[0]
             password = data.split('PASSWORD=')[1].split(';')[0]
-            device_id = data.split('DEVICE_ID=')[1].split(';')[0]
+            device_name = data.split('DEVICE_NAME=')[1].split(';')[0]
             token = data.split('TOKEN=')[1]
             print('SSID:', ssid)
             print('Password:', password)
-            print('Device id:', device_id)
+            print('Device name:', device_name)
             print('Token:', token)
             
             mac_address = get_mac_address()
             config = load_config()
             config['WIFI_SSID'] = ssid
             config['WIFI_PASS'] = password
-            config['DEVICE_ID'] = device_id
+            config['DEVICE_NAME'] = device_id
             config['TOKEN'] = token
             config['MAC_ADDRESS'] = mac_address
             save_config(config)
@@ -136,12 +136,12 @@ async def send_measurements_loop(api_url, headers):
         await send_measurement_data(api_url + "/measurements/", request_temperature, headers)
         await send_measurement_data(api_url + "/measurements/", request_humidity, headers)
         
-        await asyncio.sleep(5)  # Wait for 5 seconds before sending the next measurements
+        await asyncio.sleep(5) #Send data every 1 minute in the future
 
 async def fetch_settings_loop(api_url, headers):
     while True:
         await fetch_settings(api_url + "/settings/", headers)
-        await asyncio.sleep(10) 
+        await asyncio.sleep(10) #Fetch every 5 minutes in production
 
 async def main():
     config = load_config()
@@ -153,7 +153,6 @@ async def main():
         ap = start_ap()
         listen_for_config(ap)
     
-    # Run both loops concurrently
     await asyncio.gather(
         send_measurements_loop(config['API_URL'], headers),
         fetch_settings_loop(config['API_URL'], headers)

@@ -1,5 +1,5 @@
 {
-    "WIFI_SSID": "Gandonishe",
+    "WIFI_SSID": "Gandonish",
     "WIFI_PASS": "Dasha290605*",
     "API_URL": "http://192.168.1.106:8000",
     "DHT_22_PIN": 14,
@@ -7,5 +7,6 @@
     "TYPE": 1,
     "TOKEN": "d8546310f4afa07467b00cf4076ac38b8340f096",
     "MAC_ADDRESS": "AA:BB:CC:DD:HJ",
+    "DEVICE_NAME": "-",
     "DEVICE_ID": "3"
 }
