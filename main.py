@@ -78,19 +78,25 @@ def listen_for_config(ap):
         try:
             ssid = data.split('SSID=')[1].split(';')[0]
             password = data.split('PASSWORD=')[1].split(';')[0]
-            user_id = data.split('USER_ID=')[1]
+            device_id = data.split('DEVICE_ID=')[1].split(';')[0]
+            token = data.split('TOKEN=')[1]
             print('SSID:', ssid)
             print('Password:', password)
-            print('User id:', user_id)
+            print('Device id:', device_id)
+            print('Token:', token)
             
+            
+            mac_address = get_mac_address()
             config = load_config()
             config['WIFI_SSID'] = ssid
             config['WIFI_PASS'] = password
-            config['USER_ID'] = user_id
-            config['MAC_ADDRESS'] = get_mac_address()
+            config['DEVICE_ID'] = device_id
+            config['TOKEN'] = token
+            config['MAC_ADDRESS'] = mac_address
             save_config(config)
             
-            cl.send('Wi-Fi configured successfully. Restarting...'.encode('utf-8'))
+            response = f'{mac_address}'
+            cl.send(response.encode('utf-8'))
             machine.reset() 
         except Exception as e:
             print('Error parsing configuration:', e)
@@ -108,16 +114,25 @@ sta.active(True)
 if not configure_wifi(config['WIFI_SSID'], config['WIFI_PASS']):
     ap = start_ap()
     listen_for_config(ap)
+    
+    
+headers = {
+        "Authorization": "Token " + load_config()['TOKEN']
+}
 
 while True:
-    print(measure.measure())
-    headers = {
-        "Authorization": "Token 7509fb071cc48ad4c0199323e9ac3e731916ffaa"
-    }
-    request = {
-        "device": 2,
-        "value": 56,
+    temperature, humidity = measure.measure()
+    request_temperature = {
+        "device": load_config()['DEVICE_ID'],
+        "value": temperature,
         "type": 1
     }
-    send_measurement_data(config['API_URL'] + "/measurements/", request, headers)
+    request_humidity = {
+        "device": load_config()['DEVICE_ID'],
+        "value": humidity,
+        "type": 1
+    }
+    send_measurement_data(config['API_URL'] + "/measurements/", request_temperature, headers)
+    send_measurement_data(config['API_URL'] + "/measurements/", request_humidity, headers)
+                                            
     time.sleep(5)

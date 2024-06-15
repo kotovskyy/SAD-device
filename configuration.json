@@ -1,11 +1,11 @@
 {
-    "WIFI_SSID": "Slava UKRAINE",
-    "WIFI_PASS": "simpledimple",
-    "API_URL": "http://192.168.31.110:8000",
+    "WIFI_SSID": "Gandonishe",
+    "WIFI_PASS": "Dasha290605*",
+    "API_URL": "http://192.168.1.106:8000",
     "DHT_22_PIN": 14,
     "LIGHT_SENSOR_PIN": 34,
-    "USER_ID": 1,
     "TYPE": 1,
+    "TOKEN": "",
     "MAC_ADDRESS": "",
     "DEVICE_ID": ""
 }
