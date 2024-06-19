@@ -1,7 +1,7 @@
 {
-    "WIFI_SSID": "Slava UKRAINE",
-    "WIFI_PASS": "simpledimpleу",
-    "API_URL": "http://sad-app.azurewebsites.net",
+    "WIFI_SSID": "Gandonisheee",
+    "WIFI_PASS": "Dasha290605*",
+    "API_URL": "http://192.168.1.106:8000",
     "DHT_22_PIN": 14,
     "LIGHT_SENSOR_PIN": 34,
     "TYPE": 1,
