@@ -122,20 +122,27 @@ def listen_for_config(ap):
     s.close()
 
 async def create_device(api_url, data, headers):
-    try:
+    print(api_url, data, headers)
+    
+    
+    
+    
+    while True:
         response = urequests.post(api_url, json=data, headers=headers)
-        response_data = response.json()
-        print('Response from server:', response.text)
-        
-        config = load_config()
-        config['DEVICE_ID'] = response_data['id']
-        config['CREATED'] = 1
-        
-        save_config(config)
-        
-        response.close()
-    except Exception as e:
-        print('Error sending data:', e)
+        print("Status Code: " + response.status_code)
+        if response.status_code == '201':
+            break
+    
+    response_data = response.json()
+    print('Response from server:', response.text)
+    
+    config = load_config()
+    config['DEVICE_ID'] = response_data['id']
+    config['CREATED'] = 1
+    
+    save_config(config)
+    
+    response.close()
 
 async def send_measurements_loop(api_url, headers, device_id):
     while True:
@@ -148,7 +155,7 @@ async def send_measurements_loop(api_url, headers, device_id):
         request_humidity = {
             "device": device_id,
             "value": humidity,
-            "type": 1
+            "type": 2
         }
         print(device_id)
         await send_measurement_data(api_url + "/measurements/", request_temperature, headers)
@@ -159,12 +166,14 @@ async def send_measurements_loop(api_url, headers, device_id):
 async def fetch_settings_loop(api_url, headers, device_id):
     while True:
         await fetch_settings(api_url + "/settings/", headers, device_id)
-        await asyncio.sleep(10) #Fetch every 5 minutes in production
+        await asyncio.sleep(600) #Fetch every 5 minutes in production
 
 async def main():
     config = load_config()
     headers = {
-        "Authorization": "Token " + config['TOKEN']
+        "Authorization": f'Token {config['TOKEN']}',
+        "Content-Type": "application/json",
+        "Accept": '*/*'
     }
     
     print(config)
@@ -177,9 +186,9 @@ async def main():
 
     if config['CREATED'] == 0:
         await create_device(config['API_URL'] + "/devices/", {
-            "name": config['DEVICE_NAME'],
-            "mac_address": config['MAC_ADDRESS'],
-            "type": 1
+            'name': config['DEVICE_NAME'],
+            'mac_address': config['MAC_ADDRESS'],
+            'type': 1
         }, headers)
         config = load_config()  # Reload the config after device creation
         config['CREATED'] = 1

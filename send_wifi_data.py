@@ -3,7 +3,7 @@ import socket
 def send_wifi_config(ssid, password):
     esp32_ip = '192.168.4.1' 
     esp32_port = 8080 
-    data = f'SSID={ssid};PASSWORD={password}'
+    data = f'SSID={ssid};PASSWORD={password};'
     
     try:
         # Create a socket object
