@@ -122,20 +122,29 @@ def listen_for_config(ap):
     s.close()
 
 async def create_device(api_url, data, headers):
-    try:
-        response = urequests.post(api_url, json=data, headers=headers)
-        response_data = response.json()
-        print('Response from server:', response.text)
+    
+    while True:
+        try:
+            print("BEfore")
+            response = urequests.post(api_url, json=data, headers=headers)
+            print("after")
+            response_data = response.json()
+            print('Response from server:', response.text)
+            
+            config = load_config()
+            config['DEVICE_ID'] = response_data['id']
+            config['CREATED'] = 1
+            
+            save_config(config)
+            
+            response.close()
+            break;
+            
+
         
-        config = load_config()
-        config['DEVICE_ID'] = response_data['id']
-        config['CREATED'] = 1
-        
-        save_config(config)
-        
-        response.close()
-    except Exception as e:
-        print('Error sending data:', e)
+        except Exception as e:
+            print('Error sending data:', e)
+
 
 async def send_measurements_loop(api_url, headers, device_id):
     while True:
@@ -148,7 +157,7 @@ async def send_measurements_loop(api_url, headers, device_id):
         request_humidity = {
             "device": device_id,
             "value": humidity,
-            "type": 1
+            "type": 2
         }
         print(device_id)
         await send_measurement_data(api_url + "/measurements/", request_temperature, headers)

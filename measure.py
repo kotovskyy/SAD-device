@@ -15,6 +15,3 @@ def measure():
     d.measure()
     return d.temperature(), d.humidity()
 
-
-def measure_light():
-    
